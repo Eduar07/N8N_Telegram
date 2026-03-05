@@ -1,0 +1,365 @@
+{
+    "name": "Clima Automatizado",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours"
+              },
+              {
+                "field": "hours"
+              }
+            ]
+          }
+        },
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1.3,
+        "position": [
+          -640,
+          -272
+        ],
+        "id": "2aff71fd-4870-4868-90c9-8c10097d38fe",
+        "name": "Schedule Trigger"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.open-meteo.com/v1/forecast?latitude={{$json[\"lat\"]}}&longitude={{$json[\"lon\"]}}&current_weather=true",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.4,
+        "position": [
+          -160,
+          -272
+        ],
+        "id": "a1546914-e002-4d34-8655-d648f3ba16f5",
+        "name": "HTTP Request"
+      },
+      {
+        "parameters": {
+          "jsCode": "const items = $input.all();\nconst originalItems = $items(\"Code in JavaScript1\");\n\nlet ciudadesCalor = [];\nlet ciudadesNormal = [];\n\n// Construimos registros individuales (para MySQL)\nconst registros = items.map((item, index) => {\n  const weather = item.json.current_weather;\n  const ciudadOriginal = originalItems[index].json.name;\n\n  const temperatura = weather.temperature;\n  const viento = weather.windspeed;\n\n  const registro = {\n    json: {\n      ciudad: ciudadOriginal,\n      temperatura: temperatura,\n      viento: viento\n    }\n  };\n\n  // Clasificación\n  if (temperatura > 25) {\n    ciudadesCalor.push(\n      `🔥 ${ciudadOriginal}: ${temperatura}°C • viento ${viento} km/h`\n    );\n  } else {\n    ciudadesNormal.push(\n      `🌤️ ${ciudadOriginal}: ${temperatura}°C • viento ${viento} km/h`\n    );\n  }\n\n  return registro;\n});\n\n// Construcción del mensaje final\nlet mensajeFinal = `🌎 *Reporte del Clima - Santander*\\n\\n`;\n\nif (ciudadesCalor.length > 0) {\n  mensajeFinal += `🚨 *Temperaturas mayores a 25°C*\\n`;\n  mensajeFinal += ciudadesCalor.join(\"\\n\");\n  mensajeFinal += `\\n\\n`;\n}\n\nif (ciudadesNormal.length > 0) {\n  mensajeFinal += `✅ *Temperaturas 25°C o menores*\\n`;\n  mensajeFinal += ciudadesNormal.join(\"\\n\");\n  mensajeFinal += `\\n\\n`;\n}\n\nif (ciudadesCalor.length > 0) {\n  mensajeFinal += `⚠️ Recomendación: Mantente hidratado y evita exposición prolongada al sol.`;\n} else {\n  mensajeFinal += `Que tengas un excelente día 😊`;\n}\n\n// Agregamos el mensaje SOLO al primer item (para Telegram)\nregistros[0].json.mensajeClima = mensajeFinal;\n\nreturn registros;"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          48,
+          -272
+        ],
+        "id": "fc08f93c-3333-4c5a-a11b-4ccc8c24e017",
+        "name": "Code in JavaScript"
+      },
+      {
+        "parameters": {
+          "modelId": {
+            "__rl": true,
+            "value": "gpt-5-nano",
+            "mode": "list",
+            "cachedResultName": "GPT-5-NANO"
+          },
+          "responses": {
+            "values": [
+              {
+                "content": "=Eres un asistente meteorológico profesional.\n\nToma el siguiente reporte y devuélvelo EXACTAMENTE con la misma estructura y clasificación.\n\nNO lo resumas.\nNO lo simplifiques.\nNO elimines secciones.\nRespeta los títulos y emojis.\n\nSolo mejora ligeramente la redacción si es necesario, pero mantén la división entre:\n\n- Temperaturas mayores a 25°C\n- Temperaturas 25°C o menores\n\nAquí está el reporte:\n\n{{$json.mensajeClima}}"
+              }
+            ]
+          },
+          "builtInTools": {},
+          "options": {}
+        },
+        "type": "@n8n/n8n-nodes-langchain.openAi",
+        "typeVersion": 2.1,
+        "position": [
+          576,
+          -368
+        ],
+        "id": "94a954a0-4d5a-4a28-bc72-b378a452d317",
+        "name": "Message a model",
+        "credentials": {
+          "openAiApi": {
+            "id": "5ObuWhSyqY9Uao2I",
+            "name": "OpenAi account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "=5792196708",
+          "text": "={{$json[\"output\"][0][\"content\"][0][\"text\"]}}",
+          "additionalFields": {}
+        },
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          848,
+          -160
+        ],
+        "id": "4781ab60-77c7-406e-a612-72e546c6bcdf",
+        "name": "Send a text message",
+        "webhookId": "623302d6-3620-485f-82f6-7b16692796d9",
+        "credentials": {
+          "telegramApi": {
+            "id": "MqkTdlFuCEz3kyvD",
+            "name": "Telegram account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "jsCode": "return [\n  {\n    name: \"Giron\",\n    lat: 7.0678,\n    lon: -73.1698\n  },\n  {\n    name: \"Bucaramanga\",\n    lat: 7.125,\n    lon: -73.1198\n  },\n  {\n    name: \"Floridablanca\",\n    lat: 7.0622,\n    lon: -73.0864\n  }\n];"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -400,
+          -272
+        ],
+        "id": "bd33cf94-ee70-4e98-9a31-657fd81a4965",
+        "name": "Code in JavaScript1"
+      },
+      {
+        "parameters": {
+          "table": {
+            "__rl": true,
+            "value": "clima_registros",
+            "mode": "name"
+          },
+          "dataMode": "defineBelow",
+          "valuesToSend": {
+            "values": [
+              {
+                "column": "ciudad",
+                "value": "={{$json.ciudad}}"
+              },
+              {
+                "column": "temperatura",
+                "value": "={{$json.temperatura}}"
+              },
+              {
+                "column": "viento",
+                "value": "={{$json.viento}}"
+              }
+            ]
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.mySql",
+        "typeVersion": 2.5,
+        "position": [
+          416,
+          -176
+        ],
+        "id": "bc3e0387-c5be-4b0f-a4a6-6ed098150a2f",
+        "name": "Insert rows in a table",
+        "credentials": {
+          "mySql": {
+            "id": "gAnGp7r44LGgWq7M",
+            "name": "MySQL account"
+          }
+        }
+      },
+      {
+        "parameters": {},
+        "type": "n8n-nodes-base.limit",
+        "typeVersion": 1,
+        "position": [
+          352,
+          -400
+        ],
+        "id": "079e64ce-c7fa-4222-8194-b6938d8e5e40",
+        "name": "Limit"
+      },
+      {
+        "parameters": {
+          "operation": "append",
+          "documentId": {
+            "__rl": true,
+            "value": "1-rKFphLbCH-I8VZAT3ePqXq12eYJhxim8qQ4cudS0t0",
+            "mode": "list",
+            "cachedResultName": "Histórico Climabot",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-rKFphLbCH-I8VZAT3ePqXq12eYJhxim8qQ4cudS0t0/edit?usp=drivesdk"
+          },
+          "sheetName": {
+            "__rl": true,
+            "value": "gid=0",
+            "mode": "list",
+            "cachedResultName": "clima",
+            "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-rKFphLbCH-I8VZAT3ePqXq12eYJhxim8qQ4cudS0t0/edit#gid=0"
+          },
+          "columns": {
+            "mappingMode": "defineBelow",
+            "value": {
+              "Fecha": "={{ $now }}",
+              "Ciudad": "={{$json.ciudad}}",
+              "Temperatura": "={{$json.temperatura}}",
+              "Viento": "={{$json.viento}}",
+              "Alerta": "={{ $json.temperatura > 25 ? \"SI\" : \"NO\" }}"
+            },
+            "matchingColumns": [],
+            "schema": [
+              {
+                "id": "Fecha",
+                "displayName": "Fecha",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Ciudad",
+                "displayName": "Ciudad",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Temperatura",
+                "displayName": "Temperatura",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Viento",
+                "displayName": "Viento",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              },
+              {
+                "id": "Alerta",
+                "displayName": "Alerta",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true
+              }
+            ],
+            "attemptToConvertTypes": false,
+            "convertFieldsToString": false
+          },
+          "options": {}
+        },
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 4.7,
+        "position": [
+          256,
+          -16
+        ],
+        "id": "e4ef1160-c5ee-4b9f-9089-3b667d0beeec",
+        "name": "Append row in sheet",
+        "credentials": {
+          "googleSheetsOAuth2Api": {
+            "id": "VuGo5XPmzym141Ln",
+            "name": "Google Sheets account"
+          }
+        }
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "Insert rows in a table",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Limit",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Append row in sheet",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Message a model": {
+        "main": [
+          [
+            {
+              "node": "Send a text message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Code in JavaScript1": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Insert rows in a table": {
+        "main": [
+          []
+        ]
+      },
+      "Limit": {
+        "main": [
+          [
+            {
+              "node": "Message a model",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1",
+      "binaryMode": "separate",
+      "availableInMCP": false
+    },
+    "versionId": "9c261478-c2f1-4b19-a901-205649bd07e2",
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "8d902f65be6a89fb62ab0dbbb871250d6ca309cdd1ce3cb653520d07a0807b04"
+    },
+    "id": "uISkCi7gJZ7dkORM",
+    "tags": []
+  }
